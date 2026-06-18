@@ -68,7 +68,7 @@ function setTickTimer() {
 }
 
 function soundEnabled() {
-  return soundToggle.checked;
+  return !soundToggle || soundToggle.checked;
 }
 
 function setupAudio() {
@@ -78,8 +78,10 @@ function setupAudio() {
 
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) {
-    soundToggle.checked = false;
-    soundToggle.disabled = true;
+    if (soundToggle) {
+      soundToggle.checked = false;
+      soundToggle.disabled = true;
+    }
     return;
   }
 
@@ -442,7 +444,7 @@ canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
 startBtn.addEventListener("click", startGame);
 pauseBtn.addEventListener("click", pauseGame);
 restartBtn.addEventListener("click", restartGame);
-soundToggle.addEventListener("change", changeSound);
+soundToggle?.addEventListener("change", changeSound);
 speedInputs.forEach((input) => {
   input.addEventListener("change", changeSpeed);
 });
