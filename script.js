@@ -9,6 +9,7 @@ const startBtn = document.querySelector("#startBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
 const restartBtn = document.querySelector("#restartBtn");
 const speedInputs = document.querySelectorAll('input[name="speed"]');
+const soundToggle = document.querySelector("#soundToggle");
 
 const gridSize = 24;
 const tileCount = canvas.width / gridSize;
@@ -41,6 +42,11 @@ let running;
 let paused;
 let gameEnded;
 let touchStart;
+let audioContext;
+let musicGain;
+let sfxGain;
+let musicTimer;
+let musicStep = 0;
 
 function loadBestScore() {
   const stored = Number(localStorage.getItem("adonis-box-best-score"));
@@ -59,6 +65,102 @@ function getSelectedSpeed() {
 function setTickTimer() {
   clearInterval(tickId);
   tickId = setInterval(tick, speed);
+}
+
+function soundEnabled() {
+  return soundToggle.checked;
+}
+
+function setupAudio() {
+  if (audioContext) {
+    return;
+  }
+
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) {
+    soundToggle.checked = false;
+    soundToggle.disabled = true;
+    return;
+  }
+
+  audioContext = new AudioContext();
+  musicGain = audioContext.createGain();
+  sfxGain = audioContext.createGain();
+  musicGain.gain.value = 0.05;
+  sfxGain.gain.value = 0.16;
+  musicGain.connect(audioContext.destination);
+  sfxGain.connect(audioContext.destination);
+}
+
+function resumeAudio() {
+  setupAudio();
+  if (audioContext?.state === "suspended") {
+    audioContext.resume();
+  }
+}
+
+function playTone({ frequency, duration, type = "sine", gain = 0.14, destination = sfxGain, when = 0 }) {
+  if (!audioContext || !destination || !soundEnabled()) {
+    return;
+  }
+
+  const startTime = audioContext.currentTime + when;
+  const oscillator = audioContext.createOscillator();
+  const toneGain = audioContext.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, startTime);
+  toneGain.gain.setValueAtTime(0.0001, startTime);
+  toneGain.gain.exponentialRampToValueAtTime(gain, startTime + 0.015);
+  toneGain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  oscillator.connect(toneGain);
+  toneGain.connect(destination);
+  oscillator.start(startTime);
+  oscillator.stop(startTime + duration + 0.02);
+}
+
+function playFoodSound() {
+  resumeAudio();
+  playTone({ frequency: 660, duration: 0.09, type: "triangle", gain: 0.14 });
+  playTone({ frequency: 990, duration: 0.11, type: "triangle", gain: 0.12, when: 0.08 });
+}
+
+function playDeathSound() {
+  resumeAudio();
+  playTone({ frequency: 220, duration: 0.16, type: "sawtooth", gain: 0.13 });
+  playTone({ frequency: 146, duration: 0.26, type: "sawtooth", gain: 0.12, when: 0.13 });
+  playTone({ frequency: 92, duration: 0.32, type: "square", gain: 0.08, when: 0.32 });
+}
+
+function playMusicNote() {
+  const notes = [196, 247, 294, 247, 220, 262, 330, 262];
+  playTone({
+    frequency: notes[musicStep % notes.length],
+    duration: 0.18,
+    type: "sine",
+    gain: 0.06,
+    destination: musicGain
+  });
+  musicStep += 1;
+}
+
+function startMusic() {
+  if (!soundEnabled()) {
+    stopMusic();
+    return;
+  }
+
+  resumeAudio();
+  if (musicTimer) {
+    return;
+  }
+
+  playMusicNote();
+  musicTimer = setInterval(playMusicNote, 360);
+}
+
+function stopMusic() {
+  clearInterval(musicTimer);
+  musicTimer = null;
 }
 
 function resetGame() {
@@ -88,6 +190,7 @@ function startGame() {
   paused = false;
   hideOverlay();
   setTickTimer();
+  startMusic();
 }
 
 function pauseGame() {
@@ -98,6 +201,7 @@ function pauseGame() {
   paused = !paused;
   if (paused) {
     clearInterval(tickId);
+    stopMusic();
     showOverlay("Paused", "Resume");
   } else {
     startGame();
@@ -106,6 +210,7 @@ function pauseGame() {
 
 function restartGame() {
   clearInterval(tickId);
+  stopMusic();
   resetGame();
   startGame();
 }
@@ -132,6 +237,7 @@ function tick() {
     }
     food = createFood();
     updateScore();
+    playFoodSound();
   } else {
     snake.pop();
   }
@@ -161,9 +267,11 @@ function hitsSnake(point) {
 
 function endGame() {
   clearInterval(tickId);
+  stopMusic();
   running = false;
   paused = false;
   gameEnded = true;
+  playDeathSound();
   showOverlay("Game Over", `${score} points`);
 }
 
@@ -183,6 +291,14 @@ function changeSpeed() {
   speed = getSelectedSpeed();
   if (running && !paused) {
     setTickTimer();
+  }
+}
+
+function changeSound() {
+  if (soundEnabled() && running && !paused) {
+    startMusic();
+  } else {
+    stopMusic();
   }
 }
 
@@ -326,6 +442,7 @@ canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
 startBtn.addEventListener("click", startGame);
 pauseBtn.addEventListener("click", pauseGame);
 restartBtn.addEventListener("click", restartGame);
+soundToggle.addEventListener("change", changeSound);
 speedInputs.forEach((input) => {
   input.addEventListener("change", changeSpeed);
 });

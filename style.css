@@ -144,6 +144,7 @@ canvas {
 
 .controls,
 .speed-options,
+.sound-panel,
 .dpad {
   display: flex;
   justify-content: center;
@@ -204,6 +205,25 @@ canvas {
 
 .speed-options input {
   accent-color: var(--snake-head);
+}
+
+.sound-panel label {
+  min-width: 112px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(245, 241, 229, 0.2);
+  border-radius: 8px;
+  background: rgba(105, 209, 122, 0.13);
+  color: #e9eedf;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sound-panel input {
+  accent-color: var(--snake);
 }
 
 .dpad {

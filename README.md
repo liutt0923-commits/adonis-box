@@ -12,6 +12,7 @@ Open `index.html` in a browser.
 - Score and best-score tracking
 - Keyboard, button, and swipe controls
 - Slow, normal, and fast speed settings
+- Toggleable background music and event sound effects
 - Pause, resume, and restart actions
 - Responsive layout for desktop and mobile
 
