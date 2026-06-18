@@ -143,6 +143,7 @@ canvas {
 }
 
 .controls,
+.speed-options,
 .dpad {
   display: flex;
   justify-content: center;
@@ -169,6 +170,40 @@ canvas {
 .controls button:nth-child(3) {
   background: #f5f1e5;
   color: #172017;
+}
+
+.speed-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.speed-panel > span {
+  color: #aebaaa;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.speed-options label {
+  min-width: 84px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(245, 241, 229, 0.2);
+  border-radius: 8px;
+  background: rgba(245, 241, 229, 0.1);
+  color: #e9eedf;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.speed-options input {
+  accent-color: var(--snake-head);
 }
 
 .dpad {

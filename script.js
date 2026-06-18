@@ -8,6 +8,7 @@ const overlayText = document.querySelector("#overlayText");
 const startBtn = document.querySelector("#startBtn");
 const pauseBtn = document.querySelector("#pauseBtn");
 const restartBtn = document.querySelector("#restartBtn");
+const speedInputs = document.querySelectorAll('input[name="speed"]');
 
 const gridSize = 24;
 const tileCount = canvas.width / gridSize;
@@ -22,6 +23,11 @@ const directions = {
   left: { x: -1, y: 0 },
   right: { x: 1, y: 0 }
 };
+const speeds = {
+  slow: 145,
+  normal: 105,
+  fast: 70
+};
 
 let snake;
 let food;
@@ -29,6 +35,7 @@ let direction;
 let nextDirection;
 let score;
 let bestScore;
+let speed;
 let tickId;
 let running;
 let paused;
@@ -42,6 +49,16 @@ function loadBestScore() {
 
 function saveBestScore(value) {
   localStorage.setItem("adonis-box-best-score", String(value));
+}
+
+function getSelectedSpeed() {
+  const selected = document.querySelector('input[name="speed"]:checked');
+  return speeds[selected?.value] || speeds.normal;
+}
+
+function setTickTimer() {
+  clearInterval(tickId);
+  tickId = setInterval(tick, speed);
 }
 
 function resetGame() {
@@ -70,8 +87,7 @@ function startGame() {
   running = true;
   paused = false;
   hideOverlay();
-  clearInterval(tickId);
-  tickId = setInterval(tick, 105);
+  setTickTimer();
 }
 
 function pauseGame() {
@@ -160,6 +176,13 @@ function setDirection(name) {
   const isReverse = requested.x + direction.x === 0 && requested.y + direction.y === 0;
   if (!isReverse) {
     nextDirection = requested;
+  }
+}
+
+function changeSpeed() {
+  speed = getSelectedSpeed();
+  if (running && !paused) {
+    setTickTimer();
   }
 }
 
@@ -303,9 +326,13 @@ canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
 startBtn.addEventListener("click", startGame);
 pauseBtn.addEventListener("click", pauseGame);
 restartBtn.addEventListener("click", restartGame);
+speedInputs.forEach((input) => {
+  input.addEventListener("change", changeSpeed);
+});
 document.querySelectorAll("[data-dir]").forEach((button) => {
   button.addEventListener("click", () => setDirection(button.dataset.dir));
 });
 
 bestScore = loadBestScore();
+speed = getSelectedSpeed();
 resetGame();

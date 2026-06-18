@@ -11,6 +11,7 @@ Open `index.html` in a browser.
 - Canvas-based snake movement
 - Score and best-score tracking
 - Keyboard, button, and swipe controls
+- Slow, normal, and fast speed settings
 - Pause, resume, and restart actions
 - Responsive layout for desktop and mobile
 
