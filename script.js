@@ -88,16 +88,16 @@ function setupAudio() {
   audioContext = new AudioContext();
   musicGain = audioContext.createGain();
   sfxGain = audioContext.createGain();
-  musicGain.gain.value = 0.07;
+  musicGain.gain.value = 0.14;
   sfxGain.gain.value = 0.16;
   musicGain.connect(audioContext.destination);
   sfxGain.connect(audioContext.destination);
 }
 
-async function resumeAudio() {
+function resumeAudio() {
   setupAudio();
   if (audioContext?.state === "suspended") {
-    await audioContext.resume();
+    audioContext.resume().catch(() => {});
   }
 }
 
@@ -120,55 +120,64 @@ function playTone({ frequency, duration, type = "sine", gain = 0.14, destination
   oscillator.stop(startTime + duration + 0.02);
 }
 
-async function playFoodSound() {
-  await resumeAudio();
+function playFoodSound() {
+  resumeAudio();
   playTone({ frequency: 660, duration: 0.09, type: "triangle", gain: 0.14 });
   playTone({ frequency: 990, duration: 0.11, type: "triangle", gain: 0.12, when: 0.08 });
 }
 
-async function playDeathSound() {
-  await resumeAudio();
+function playDeathSound() {
+  resumeAudio();
   playTone({ frequency: 220, duration: 0.16, type: "sawtooth", gain: 0.13 });
   playTone({ frequency: 146, duration: 0.26, type: "sawtooth", gain: 0.12, when: 0.13 });
   playTone({ frequency: 92, duration: 0.32, type: "square", gain: 0.08, when: 0.32 });
 }
 
 function playMusicNote() {
-  const notes = [262, 330, 392, 523, 392, 330, 294, 392];
+  const notes = [330, 392, 523, 659, 523, 392, 440, 587];
+  const bassNotes = [165, 196, 262, 196];
   const frequency = notes[musicStep % notes.length];
+  const bassFrequency = bassNotes[Math.floor(musicStep / 2) % bassNotes.length];
   playTone({
     frequency,
-    duration: 0.16,
+    duration: 0.2,
     type: "triangle",
-    gain: 0.055,
+    gain: 0.09,
+    destination: musicGain
+  });
+  playTone({
+    frequency: bassFrequency,
+    duration: 0.18,
+    type: "sine",
+    gain: 0.04,
     destination: musicGain
   });
   if (musicStep % 2 === 0) {
     playTone({
       frequency: frequency * 2,
-      duration: 0.08,
+      duration: 0.1,
       type: "sine",
-      gain: 0.025,
+      gain: 0.04,
       destination: musicGain,
-      when: 0.08
+      when: 0.1
     });
   }
   musicStep += 1;
 }
 
-async function startMusic() {
+function startMusic() {
   if (!soundEnabled()) {
     stopMusic();
     return;
   }
 
-  await resumeAudio();
+  resumeAudio();
   if (musicTimer) {
     return;
   }
 
   playMusicNote();
-  musicTimer = setInterval(playMusicNote, 290);
+  musicTimer = setInterval(playMusicNote, 240);
 }
 
 function stopMusic() {
@@ -421,6 +430,7 @@ function handleKey(event) {
 
   if (keyMap[event.key]) {
     event.preventDefault();
+    startMusic();
     setDirection(keyMap[event.key]);
   }
 
@@ -450,6 +460,7 @@ function handleTouchEnd(event) {
   }
 
   setDirection(isHorizontal ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up");
+  startMusic();
   touchStart = null;
 }
 
@@ -467,7 +478,10 @@ speedInputs.forEach((input) => {
   input.addEventListener("change", changeSpeed);
 });
 document.querySelectorAll("[data-dir]").forEach((button) => {
-  button.addEventListener("click", () => setDirection(button.dataset.dir));
+  button.addEventListener("click", () => {
+    startMusic();
+    setDirection(button.dataset.dir);
+  });
 });
 
 bestScore = loadBestScore();
