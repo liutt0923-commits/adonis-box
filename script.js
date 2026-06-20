@@ -46,6 +46,7 @@ let audioContext;
 let musicGain;
 let sfxGain;
 let musicTimer;
+let musicStarting = false;
 let musicStep = 0;
 
 function loadBestScore() {
@@ -88,17 +89,27 @@ function setupAudio() {
   audioContext = new AudioContext();
   musicGain = audioContext.createGain();
   sfxGain = audioContext.createGain();
-  musicGain.gain.value = 0.14;
+  musicGain.gain.value = 0.28;
   sfxGain.gain.value = 0.16;
   musicGain.connect(audioContext.destination);
   sfxGain.connect(audioContext.destination);
 }
 
-function resumeAudio() {
+async function resumeAudio() {
   setupAudio();
-  if (audioContext?.state === "suspended") {
-    audioContext.resume().catch(() => {});
+  if (!audioContext) {
+    return false;
   }
+
+  if (audioContext?.state === "suspended") {
+    try {
+      await audioContext.resume();
+    } catch {
+      return false;
+    }
+  }
+
+  return audioContext.state === "running";
 }
 
 function playTone({ frequency, duration, type = "sine", gain = 0.14, destination = sfxGain, when = 0 }) {
@@ -140,53 +151,57 @@ function playMusicNote() {
   const bassFrequency = bassNotes[Math.floor(musicStep / 2) % bassNotes.length];
   playTone({
     frequency,
-    duration: 0.2,
+    duration: 0.34,
     type: "triangle",
-    gain: 0.09,
+    gain: 0.16,
     destination: musicGain
   });
   playTone({
     frequency: bassFrequency,
-    duration: 0.18,
+    duration: 0.32,
     type: "sine",
-    gain: 0.04,
+    gain: 0.08,
     destination: musicGain
   });
   if (musicStep % 2 === 0) {
     playTone({
       frequency: frequency * 2,
-      duration: 0.1,
+      duration: 0.16,
       type: "sine",
-      gain: 0.04,
+      gain: 0.06,
       destination: musicGain,
-      when: 0.1
+      when: 0.12
     });
   }
   musicStep += 1;
 }
 
-function startMusic() {
+async function startMusic() {
   if (!soundEnabled()) {
     stopMusic();
     return;
   }
 
-  resumeAudio();
-  if (musicTimer) {
+  if (musicTimer || musicStarting) {
     return;
   }
 
+  musicStarting = true;
+  const canPlay = await resumeAudio();
+  musicStarting = false;
+  if (!canPlay || musicTimer || !soundEnabled()) {
+    return;
+  }
+
+  musicStep = 0;
   playMusicNote();
-  musicTimer = setInterval(playMusicNote, 240);
+  musicTimer = setInterval(playMusicNote, 280);
 }
 
 function stopMusic() {
   clearInterval(musicTimer);
   musicTimer = null;
-}
-
-function startMusicFromGesture() {
-  startMusic();
+  musicStarting = false;
 }
 
 function resetGame() {
@@ -430,7 +445,9 @@ function handleKey(event) {
 
   if (keyMap[event.key]) {
     event.preventDefault();
-    startMusic();
+    if (running && !paused) {
+      startMusic();
+    }
     setDirection(keyMap[event.key]);
   }
 
@@ -460,14 +477,13 @@ function handleTouchEnd(event) {
   }
 
   setDirection(isHorizontal ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up");
-  startMusic();
+  if (running && !paused) {
+    startMusic();
+  }
   touchStart = null;
 }
 
 document.addEventListener("keydown", handleKey);
-document.addEventListener("pointerdown", startMusicFromGesture, { once: true });
-document.addEventListener("keydown", startMusicFromGesture, { once: true });
-document.addEventListener("touchstart", startMusicFromGesture, { once: true, passive: true });
 canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
 canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
 startBtn.addEventListener("click", startGame);
@@ -479,7 +495,9 @@ speedInputs.forEach((input) => {
 });
 document.querySelectorAll("[data-dir]").forEach((button) => {
   button.addEventListener("click", () => {
-    startMusic();
+    if (running && !paused) {
+      startMusic();
+    }
     setDirection(button.dataset.dir);
   });
 });
