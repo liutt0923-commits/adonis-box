@@ -25,9 +25,9 @@ const directions = {
   right: { x: 1, y: 0 }
 };
 const speeds = {
-  slow: 145,
-  normal: 105,
-  fast: 70
+  slow: 210,
+  normal: 165,
+  fast: 125
 };
 
 let snake;
@@ -88,16 +88,16 @@ function setupAudio() {
   audioContext = new AudioContext();
   musicGain = audioContext.createGain();
   sfxGain = audioContext.createGain();
-  musicGain.gain.value = 0.05;
+  musicGain.gain.value = 0.07;
   sfxGain.gain.value = 0.16;
   musicGain.connect(audioContext.destination);
   sfxGain.connect(audioContext.destination);
 }
 
-function resumeAudio() {
+async function resumeAudio() {
   setupAudio();
   if (audioContext?.state === "suspended") {
-    audioContext.resume();
+    await audioContext.resume();
   }
 }
 
@@ -120,49 +120,64 @@ function playTone({ frequency, duration, type = "sine", gain = 0.14, destination
   oscillator.stop(startTime + duration + 0.02);
 }
 
-function playFoodSound() {
-  resumeAudio();
+async function playFoodSound() {
+  await resumeAudio();
   playTone({ frequency: 660, duration: 0.09, type: "triangle", gain: 0.14 });
   playTone({ frequency: 990, duration: 0.11, type: "triangle", gain: 0.12, when: 0.08 });
 }
 
-function playDeathSound() {
-  resumeAudio();
+async function playDeathSound() {
+  await resumeAudio();
   playTone({ frequency: 220, duration: 0.16, type: "sawtooth", gain: 0.13 });
   playTone({ frequency: 146, duration: 0.26, type: "sawtooth", gain: 0.12, when: 0.13 });
   playTone({ frequency: 92, duration: 0.32, type: "square", gain: 0.08, when: 0.32 });
 }
 
 function playMusicNote() {
-  const notes = [196, 247, 294, 247, 220, 262, 330, 262];
+  const notes = [262, 330, 392, 523, 392, 330, 294, 392];
+  const frequency = notes[musicStep % notes.length];
   playTone({
-    frequency: notes[musicStep % notes.length],
-    duration: 0.18,
-    type: "sine",
-    gain: 0.06,
+    frequency,
+    duration: 0.16,
+    type: "triangle",
+    gain: 0.055,
     destination: musicGain
   });
+  if (musicStep % 2 === 0) {
+    playTone({
+      frequency: frequency * 2,
+      duration: 0.08,
+      type: "sine",
+      gain: 0.025,
+      destination: musicGain,
+      when: 0.08
+    });
+  }
   musicStep += 1;
 }
 
-function startMusic() {
+async function startMusic() {
   if (!soundEnabled()) {
     stopMusic();
     return;
   }
 
-  resumeAudio();
+  await resumeAudio();
   if (musicTimer) {
     return;
   }
 
   playMusicNote();
-  musicTimer = setInterval(playMusicNote, 360);
+  musicTimer = setInterval(playMusicNote, 290);
 }
 
 function stopMusic() {
   clearInterval(musicTimer);
   musicTimer = null;
+}
+
+function startMusicFromGesture() {
+  startMusic();
 }
 
 function resetGame() {
@@ -439,6 +454,9 @@ function handleTouchEnd(event) {
 }
 
 document.addEventListener("keydown", handleKey);
+document.addEventListener("pointerdown", startMusicFromGesture, { once: true });
+document.addEventListener("keydown", startMusicFromGesture, { once: true });
+document.addEventListener("touchstart", startMusicFromGesture, { once: true, passive: true });
 canvas.addEventListener("touchstart", handleTouchStart, { passive: true });
 canvas.addEventListener("touchend", handleTouchEnd, { passive: true });
 startBtn.addEventListener("click", startGame);
